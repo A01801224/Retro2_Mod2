@@ -118,6 +118,36 @@ def experimento_max_depth(X_entrenamiento, y_entrenamiento, X_prueba, y_prueba):
     return resultados
 
 
+def predicciones_de_ejemplo(modelo, X_prueba, y_prueba, cuantas=10):
+    """Muestra en consola algunas predicciones individuales, mezclando
+    ejemplos de ambas clases para no sesgar la muestra hacia la mayoritaria."""
+    y_prueba_lista = y_prueba.tolist()
+    indices_positivos = [i for i, clase in enumerate(y_prueba_lista) if clase == 1]
+    indices_negativos = [i for i, clase in enumerate(y_prueba_lista) if clase == 0]
+
+    mitad = cuantas // 2
+    indices = indices_positivos[:mitad] + indices_negativos[:cuantas - mitad]
+
+    predicciones = predecir(modelo, X_prueba)
+
+    print(f"  {'#':>4}  {'PageValues':>12}  {'ProductRel':>11}  "
+          f"{'ExitRates':>10}  {'Real':>5}  {'Predicho':>9}  {'Resultado':>10}")
+
+    aciertos = 0
+    for i in indices:
+        registro = X_prueba.iloc[i]
+        prediccion = predicciones[i]
+        real = y_prueba_lista[i]
+        correcto = prediccion == real
+        aciertos += correcto
+
+        print(f"  {i:>4}  {registro['PageValues']:>12.2f}  {registro['ProductRelated']:>11.0f}  "
+              f"{registro['ExitRates']:>10.4f}  {real:>5}  {prediccion:>9}  "
+              f"{'acierto' if correcto else 'ERROR':>10}")
+
+    print(f"\n  {aciertos} de {len(indices)} correctos en esta muestra")
+
+
 def main():
     inicio_total = time.time()
 
@@ -162,7 +192,8 @@ def main():
     imprimir_reporte(metricas_modelo_1, "Resultados de modelo_1 sobre el conjunto de prueba")
 
     print("  Variables mas importantes (feature_importances_):")
-    for nombre, importancia in importancia_variables(modelo_1, VARIABLES)[:5]:
+    importancias_modelo_1 = importancia_variables(modelo_1, VARIABLES)
+    for nombre, importancia in importancias_modelo_1[:5]:
         print(f"    {nombre:<26} {importancia:.4f}")
 
     separador("3. EXPERIMENTO 1 - EFECTO DE N_ESTIMATORS")
@@ -216,9 +247,25 @@ def main():
         key=lambda par: par[1]["f1"])[0]
     print(f"\n  Mejor de los tres segun F1: {mejor_modelo_nombre}")
 
+    separador("7. PREDICCIONES DE EJEMPLO (con modelo_3)")
+    predicciones_de_ejemplo(modelo_3, X_prueba, y_prueba)
+
+    separador("8. GRAFICAS")
+    visualizacion.graficar_distribucion_clases(datos)
+    visualizacion.graficar_histogramas(datos)
+    visualizacion.graficar_correlacion(datos)
+    visualizacion.graficar_matriz_confusion(
+        metricas_modelo_3, "Matriz de confusion - modelo_3 (optimo)",
+        "matriz_confusion.png")
+    visualizacion.graficar_curva_n_estimators(resultados_n_estimators)
+    visualizacion.graficar_curva_max_depth(resultados_max_depth)
+    visualizacion.graficar_comparacion_modelos(
+        metricas_modelo_1, metricas_modelo_2, metricas_modelo_3)
+    visualizacion.graficar_importancia_variables(importancias_modelo_1)
+    visualizacion.graficar_arbol_ejemplo(modelo_3)
+
     print()
-    print(f"Todo listo hasta la seccion 6 en {time.time() - inicio_total:.1f} segundos.")
-    # Todavia faltan la seccion 7 (predicciones de ejemplo) y la 8 (graficas).
+    print(f"Todo listo en {time.time() - inicio_total:.1f} segundos.")
 
 
 if __name__ == "__main__":
